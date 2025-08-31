@@ -58,7 +58,7 @@ export default function App() {
   const [toppingToEdit, setToppingToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState({ id: null, type: '' });
 
-  const users = ['User 1', 'User 2', 'User 3', 'User 4'];
+  const users = ['Pratham', 'Astha', 'Divyansh', 'Nency'];
   const stalls = ["Baker's Version", "Knits' Version"];
 
   useEffect(() => {
