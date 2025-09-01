@@ -24,6 +24,7 @@ import EditToppingModal from './components/EditToppingModal.jsx';
 import AddToppingsModal from './components/AddToppingsModal.jsx';
 import Login from './components/Login.jsx';
 import Layout from './components/Layout.jsx';
+import EditOrderModal from './components/EditOrderModal.jsx';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -39,6 +40,7 @@ export default function App() {
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [comboSearchTerm, setComboSearchTerm] = useState('');
 
+  // Modal states
   const [isAddProductModalOpen, setAddProductModalOpen] = useState(false);
   const [isEditProductModalOpen, setEditProductModalOpen] = useState(false);
   const [isQuantityModalOpen, setQuantityModalOpen] = useState(false);
@@ -50,7 +52,9 @@ export default function App() {
   const [isAddToppingModalOpen, setAddToppingModalOpen] = useState(false);
   const [isEditToppingModalOpen, setEditToppingModalOpen] = useState(false);
   const [isAddToppingsToSaleModalOpen, setAddToppingsToSaleModalOpen] = useState(false);
+  const [isEditOrderModalOpen, setEditOrderModalOpen] = useState(false);
   
+  // State for data being processed
   const [productToEdit, setProductToEdit] = useState(null);
   const [saleToProcess, setSaleToProcess] = useState(null);
   const [saleToEdit, setSaleToEdit] = useState(null);
@@ -58,7 +62,7 @@ export default function App() {
   const [toppingToEdit, setToppingToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState({ id: null, type: '' });
 
-  const users = ['Pratham', 'Astha', 'Divyansh', 'Nency'];
+  const users = ['Pratham', 'Astha', 'Nency', 'Divyansh'];
   const stalls = ["Baker's Version", "Knits' Version"];
 
   useEffect(() => {
@@ -117,6 +121,7 @@ export default function App() {
   const handleDeleteTopping = (id) => { setItemToDelete({ id, type: 'topping' }); setConfirmationModalOpen(true); };
   const handleSellClick = (item) => { setSaleToProcess({ ...item, quantity: 1 }); setQuantityModalOpen(true); };
   const handleOrderClick = () => { setCreateOrderModalOpen(true); };
+  
   const handleQuantitySelected = (quantity) => {
     const itemWithQuantity = { ...saleToProcess, quantity };
     setSaleToProcess(itemWithQuantity);
@@ -124,6 +129,7 @@ export default function App() {
     if (itemWithQuantity.stall === "Baker's Version") { setAddToppingsToSaleModalOpen(true); } 
     else { finalizeSale(itemWithQuantity, [], itemWithQuantity.price * quantity); }
   };
+  
   const handleOrderSelected = (orderItems, total, stall) => {
     const orderWithTotal = { name: 'Custom Order', price: total, stall, isOrder: true, orderItems: Object.values(orderItems).map(({ item, quantity }) => ({ name: item.name, quantity, price: item.price })) };
     setSaleToProcess(orderWithTotal);
@@ -131,7 +137,9 @@ export default function App() {
     if (stall === "Baker's Version") { setAddToppingsToSaleModalOpen(true); } 
     else { finalizeSale(orderWithTotal, [], total); }
   };
+
   const handleToppingsSelected = (toppingsArray, finalTotal) => { finalizeSale(saleToProcess, toppingsArray, finalTotal); };
+  
   const finalizeSale = async (item, toppings = [], finalPrice) => {
     const saleData = {
       productName: item.name, price: finalPrice, quantity: item.isOrder ? 1 : item.quantity,
@@ -144,9 +152,20 @@ export default function App() {
     setAddToppingsToSaleModalOpen(false);
     setSaleToProcess(null);
   };
-  const handleOpenEditSaleModal = (sale) => { setSaleToEdit(sale); setEditSaleModalOpen(true); };
+
+  const handleOpenEditSaleModal = (sale) => {
+    setSaleToEdit(sale);
+    if(sale.isOrder) {
+      setEditOrderModalOpen(true);
+    } else {
+      setEditSaleModalOpen(true);
+    }
+  };
+  
   const handleUpdateSale = async (id, updatedFields) => { await updateDoc(doc(db, 'sales', id), updatedFields); setEditSaleModalOpen(false); };
+  const handleUpdateOrder = async (id, items, price) => { await updateDoc(doc(db, 'sales', id), { orderItems: items, price: price }); setEditOrderModalOpen(false); };
   const handleDeleteSale = (id) => { setItemToDelete({ id, type: 'sale' }); setConfirmationModalOpen(true); };
+  
   const handleConfirmDelete = async () => {
     if (!itemToDelete.id) return;
     await deleteDoc(doc(db, `${itemToDelete.type}s`, itemToDelete.id)); 
@@ -228,6 +247,7 @@ export default function App() {
       <AddToppingModal isOpen={isAddToppingModalOpen} onClose={() => setAddToppingModalOpen(false)} onSubmit={handleAddTopping} />
       <EditToppingModal isOpen={isEditToppingModalOpen} onClose={() => setEditToppingModalOpen(false)} onSubmit={handleUpdateTopping} topping={toppingToEdit} />
       <AddToppingsModal isOpen={isAddToppingsToSaleModalOpen} onClose={() => setAddToppingsToSaleModalOpen(false)} onSubmit={handleToppingsSelected} saleItem={saleToProcess} toppings={toppings} />
+      <EditOrderModal isOpen={isEditOrderModalOpen} onClose={() => setEditOrderModalOpen(false)} onSubmit={handleUpdateOrder} sale={saleToEdit} />
     </Layout>
   );
 }

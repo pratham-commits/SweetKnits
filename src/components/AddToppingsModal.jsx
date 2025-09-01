@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { PlusIcon, TrashIcon } from './Icons.jsx';
+import React, { useState, useMemo, useEffect } from 'react';
+import { PlusIcon, TrashIcon } from './Icons';
 
 export default function AddToppingsModal({ isOpen, onClose, onSubmit, saleItem, toppings }) {
   const [selectedToppings, setSelectedToppings] = useState({});
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [finalTotal, setFinalTotal] = useState(0);
 
   const basePrice = useMemo(() => {
     if (!saleItem) return 0;
@@ -10,14 +12,23 @@ export default function AddToppingsModal({ isOpen, onClose, onSubmit, saleItem, 
     return saleItem.price * saleItem.quantity;
   }, [saleItem]);
 
-  const finalTotal = useMemo(() => {
+  const calculatedTotal = useMemo(() => {
     const toppingsTotal = Object.values(selectedToppings).reduce((total, topping) => {
       return total + (topping.price * topping.quantity);
     }, 0);
     return basePrice + toppingsTotal;
   }, [selectedToppings, basePrice]);
 
+  // When the modal opens or the calculated total changes, update the final total
+  // unless the user is actively editing the price.
+  useEffect(() => {
+    if (!isEditingPrice) {
+      setFinalTotal(calculatedTotal);
+    }
+  }, [calculatedTotal, isEditingPrice, isOpen]);
+
   const handleAddTopping = (topping) => {
+    setIsEditingPrice(false); // Reset price editing when the order changes
     const newSelection = { ...selectedToppings };
     if (newSelection[topping.id]) {
       newSelection[topping.id].quantity += 1;
@@ -28,12 +39,17 @@ export default function AddToppingsModal({ isOpen, onClose, onSubmit, saleItem, 
   };
   
   const handleRemoveTopping = (toppingId) => {
+    setIsEditingPrice(false); // Reset price editing when the order changes
     const newSelection = { ...selectedToppings };
     delete newSelection[toppingId];
     setSelectedToppings(newSelection);
   };
 
   const handleFinalizeSale = () => {
+    if(finalTotal < 0 || isNaN(finalTotal)) {
+        alert("Please enter a valid final price.");
+        return;
+    }
     const toppingsArray = Object.values(selectedToppings).map(t => ({ name: t.name, price: t.price, quantity: t.quantity }));
     onSubmit(toppingsArray, finalTotal);
     resetAndClose();
@@ -41,6 +57,7 @@ export default function AddToppingsModal({ isOpen, onClose, onSubmit, saleItem, 
 
   const resetAndClose = () => {
     setSelectedToppings({});
+    setIsEditingPrice(false);
     onClose();
   };
 
@@ -82,11 +99,23 @@ export default function AddToppingsModal({ isOpen, onClose, onSubmit, saleItem, 
           </div>
         </div>
 
-        {/* --- RESPONSIVE FOOTER (FIXED) --- */}
+        {/* --- RESPONSIVE FOOTER WITH EDITABLE PRICE --- */}
         <div className="mt-6 pt-4 border-t border-soft-pink flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-center sm:text-left">
-              <p className="text-md font-semibold text-text-light">Base Price: ₹{basePrice.toFixed(2)}</p>
-              <p className="text-xl font-bold text-text-dark">Final Total: ₹{finalTotal.toFixed(2)}</p>
+              <p className="text-md font-semibold text-text-light">Calculated Total: ₹{calculatedTotal.toFixed(2)}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <label htmlFor="final-price" className="text-xl font-bold text-text-dark">Final Total: ₹</label>
+                <input 
+                  id="final-price"
+                  type="number"
+                  value={finalTotal.toFixed(2)}
+                  onChange={(e) => setFinalTotal(Number(e.target.value))}
+                  onFocus={() => setIsEditingPrice(true)}
+                  className="text-xl font-bold text-text-dark bg-transparent border-b-2 border-accent-pink w-28 focus:outline-none"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             </div>
             <button type="button" onClick={handleFinalizeSale} className="w-full sm:w-auto px-8 py-3 bg-accent-pink text-white font-bold text-lg rounded-lg hover:bg-pink-500">Finalize Sale</button>
         </div>
